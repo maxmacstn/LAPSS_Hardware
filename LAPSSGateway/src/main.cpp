@@ -9,14 +9,14 @@
 #define SS 18   // GPIO18 - SX1278's CS
 #define RST 14  // GPIO14 - SX1278's RESET
 #define DI0 26  // GPIO26 - SX1278's IRQ (interrupt request)
-#define BAND 91590
+#define BAND 915E6
 
 LapssGateway gateway; //init Lapss core library
 
 
 void onReceive(int packetSize){
    // received a packet
-  Serial.print("Received packet '");
+  Serial.print("Received packet \n");
 
   if (packetSize != 10){       //Wrong size of data
     Serial.println("Size mismatch");
@@ -35,7 +35,7 @@ void onReceive(int packetSize){
   }
   
   Serial.printf("Received from node ID : %d with RSSI : %d\n",gateway.data.ID, LoRa.packetRssi());
-  Serial.printf("\ttemp: %.2f\n\thumidity: %d\n\tPM1: %d\n\tPM2.5: &d\n\tPM10: %d",gateway.data.TEMP,gateway.data.HUMIDITY,gateway.data.PM1,gateway.data.PM25,gateway.data.PM10);
+  Serial.printf("\ttemp: %.2f\n\thumidity: %d\n\tPM1: %d\n\tPM2.5: %d\n\tPM10: %d\n",gateway.data.TEMP,gateway.data.HUMIDITY,gateway.data.PM1,gateway.data.PM25,gateway.data.PM10);
 
 }
 
@@ -54,7 +54,6 @@ void setup()
       ;
   }
   
-  LoRa.onReceive(onReceive);
   
   Serial.println("init lora Ok");
   
@@ -62,4 +61,9 @@ void setup()
 
 }
 
-void loop(){}
+void loop(){
+  int packetSize = LoRa.parsePacket();
+  if (packetSize) {
+   onReceive(packetSize);
+  }
+}
