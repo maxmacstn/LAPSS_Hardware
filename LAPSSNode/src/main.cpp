@@ -13,7 +13,7 @@
 #define SS 18   // GPIO18 - SX1278's CS
 #define RST 14  // GPIO14 - SX1278's RESET
 #define DI0 26  // GPIO26 - SX1278's IRQ (interrupt request)
-#define BAND 91590
+#define BAND 915E6
 #define uS_TO_S_FACTOR 1000000 /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP 120       /* Time ESP32 will go to sleep (in seconds) */
 
@@ -54,15 +54,14 @@ void setup()
   // Serial.printf("Struct size = %d\n", sizeof(node.data));
 
 
+  //Print the data as Hex
   uint8_t *addr = &(node.data).ID;
     uint8_t len = sizeof(node.data);
     while (len--) {
 		uint8_t inbyte = *addr++;
-			Serial.printf("%x ",inbyte);
+			Serial.printf("%02X ",inbyte);
 			}
     
-  //   Serial.printf("\nfloat value = %x",node.data.TEMP);
-
   node.sendPacket();
 
 }
