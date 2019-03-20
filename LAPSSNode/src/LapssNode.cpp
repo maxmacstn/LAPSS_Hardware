@@ -12,25 +12,25 @@ void LapssNode::setTemp(float temp)
     updateCRC8();
 }
 
-void LapssNode::setHumidity(uint8_t humidity)
+void LapssNode::setHumidity(float humidity)
 {
     data.HUMIDITY = humidity;
     updateCRC8();
 }
 
-void LapssNode::setPM25(uint8_t pm25)
+void LapssNode::setPM25(uint16_t pm25)
 {
     data.PM25 = pm25;
     updateCRC8();
 }
 
-void LapssNode::setPM1(uint8_t pm1)
+void LapssNode::setPM1(uint16_t pm1)
 {
     data.PM1 = pm1;
     updateCRC8();
 }
 
-void LapssNode::setPM10(uint8_t pm10)
+void LapssNode::setPM10(uint16_t pm10)
 {
     data.PM10 = pm10;
     updateCRC8();
