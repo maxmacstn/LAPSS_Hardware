@@ -14,6 +14,7 @@
 #define RST 14  // GPIO14 - SX1278's RESET
 #define DI0 26  // GPIO26 - SX1278's IRQ (interrupt request)
 #define BAND 915E6
+#define HR_TO_RESET 12
 
 LapssGateway gateway; //init Lapss core library
 SSD1306 display (0x3c, 4, 15);
@@ -214,4 +215,7 @@ void loop(){
   }
   delay(100);
   displayData();
+  if (millis() > 1000*60*60*HR_TO_RESET){
+    ESP.restart();
+  }
 }

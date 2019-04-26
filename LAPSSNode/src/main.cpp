@@ -124,7 +124,7 @@ void setup()
     while (1)
       ;
   }
-  node.setup(LoRa, 0);
+  node.setup(LoRa, 1);
   Serial.println("init lora Ok");
 
   fetchDHT();
@@ -142,6 +142,7 @@ void setup()
   //Sleep ESP32
   esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
   Serial.println("Sleep the MCU");
+    digitalWrite(ONBOARD_LED,LOW);
 
   esp_deep_sleep_start();
 }
