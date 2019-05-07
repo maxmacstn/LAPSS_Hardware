@@ -77,6 +77,8 @@ void sendData(){
   {
     showDebugMessage("Send Failed Error code :"+ String(httpCode,DEC));
     delay(500);
+    ESP.restart();    // Reset the MCU if the connection failed.
+
   }
 
   http.end(); //Close connection
@@ -121,13 +123,15 @@ void displayData () {
   display.drawString (0, 0, rssi);
 
   display.setFont(ArialMT_Plain_16);
-  display.drawString (0, 23, String(temperature,1)+"°c  " + String(humidity,1) + "%\n" + "PM25: "+ PM25 +" ug/cm3");
+  display.drawString (0, 25, String(temperature,1)+"°c  " + String(humidity,1) + "%\n" + "PM25: "+ PM25 +" ug/cm3");
 
   int lastUpdateSec = (millis() - lastUpdate) /1000;
 
   display.setTextAlignment (TEXT_ALIGN_RIGHT);
   display.setFont (ArialMT_Plain_10);
-  display.drawString (127, 0, String(lastUpdateSec) +"s ago");
+  
+  display.drawString (127, 0, "By node " + String( node_id));
+  display.drawString (127, 12, String(lastUpdateSec) +"s ago");
 
 
   display.display ();
