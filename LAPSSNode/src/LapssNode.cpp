@@ -78,3 +78,17 @@ void LapssNode::sendPacket()
     }
     LoRa.endPacket(); // finish packet and send it
 }
+
+uint8_t* LapssNode::getPacket(uint8_t &arr)
+{
+
+    uint8_t *addr = &data.ID;
+    uint8_t *dstAddr = &arr;
+    uint8_t len = sizeof(data);
+    while (len--)
+    {
+        uint8_t dataByte = *addr++;
+        *dstAddr++ = dataByte;
+    }
+    return dstAddr;
+}

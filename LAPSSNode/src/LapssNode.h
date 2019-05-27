@@ -37,6 +37,7 @@ class LapssNode{
         void setPM10(uint16_t);
         uint8_t getDataCRC8();
         void sendPacket();
+        uint8_t* getPacket(uint8_t&);
 
 
     private:

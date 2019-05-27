@@ -6,6 +6,7 @@
 #include "WiFiManager.h"
 #include "ArduinoJson.h"
 #include "HTTPClient.h"
+#include "ArduinoUnit.h"
 
 //Define variable
 #define SCK 5   // GPIO5 - SX1278's SCK
@@ -186,26 +187,119 @@ void setup()
   
   node.setup(LoRa, NODE_ID);
 
-  fetchDHT();
-  if (bootCount % PMS_UPDATE_INTERVAL == 0){
-    fetchPMS();
-  }else{ 
-    //if isn't the time for fetching new dust senser value, return last value instead.
-    node.setPM25(PM25);
-    node.setPM1(PM1);
-    node.setPM10(PM10);
-  }
+  
 
-  bootCount++;
-  sendData();
-  //Sleep ESP32
-  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-  Serial.println("Sleep the MCU");
-    digitalWrite(ONBOARD_LED,LOW);
+  // fetchDHT();
+  // if (bootCount % PMS_UPDATE_INTERVAL == 0){
+  //   fetchPMS();
+  // }else{ 
+  //   //if isn't the time for fetching new dust senser value, return last value instead.
+  //   node.setPM25(PM25);
+  //   node.setPM1(PM1);
+  //   node.setPM10(PM10);
+  // }
 
-  esp_deep_sleep_start();
+  // bootCount++;
+  // sendData();
+  // //Sleep ESP32
+  // esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+  // Serial.println("Sleep the MCU");
+  //   digitalWrite(ONBOARD_LED,LOW);
+
+  // esp_deep_sleep_start();
 }
 
 void loop()
 {
+
+  Test::run();
+}
+
+
+
+class TestCase {
+
+    public:
+  uint8_t ID;
+  float TEMP;
+  float HUMIDITY;
+  uint16_t PM25;
+  uint16_t PM1;
+  uint16_t PM10;
+
+
+  TestCase(){
+    ID = random(256);
+    TEMP = random(-5000,5000)/100.0;
+    HUMIDITY = random(0,10000)/100.0;
+    PM25 = random(0,500);
+    PM1 = random(0,500);
+    PM10 = random(0,500);
+  }
+
+};
+
+
+test(ok) 
+{
+
+  int totalCase = 1000;
+
+  for(int c = 0; c < totalCase; c++){
+
+  TestCase test1 = TestCase();
+  Serial.printf("id:%3d t:%6.2f h:%6.2f PM25:%3d PM1:%3d PM10:%3d\n", test1.ID, test1.TEMP,test1.HUMIDITY,test1.PM25, test1.PM1 , test1.PM10);
+  // Serial.printf("id:%3d t:%6.2f h:%6.2f PM25:%3d PM1:%3d PM10:%3d\n", test2.ID, test2.TEMP,test2.HUMIDITY,test2.PM25, test2.PM1 , test2.PM10);
+
+  node.data.ID = 0;
+  node.setTemp(test1.TEMP);
+  node.setHumidity(test1.HUMIDITY);
+  node.setPM1(test1.PM1);
+  node.setPM10(test1.PM10);
+  node.setPM25(test1.PM25);
+  
+
+  uint8_t result[16];
+  node.getPacket(*result);
+
+  assertEqual(result[15], node.getDataCRC8());
+  // for(int i = 0; i < 16; i++){
+  //   Serial.printf("%x ", result[i]);
+  // }
+
+  }
+
+ 
+}
+
+test(bad) 
+{
+
+  int totalCase = 1000;
+
+  for(int c = 0; c < totalCase; c++){
+
+  TestCase test1 = TestCase();
+  Serial.printf("id:%3d t:%6.2f h:%6.2f PM25:%3d PM1:%3d PM10:%3d\n", test1.ID, test1.TEMP,test1.HUMIDITY,test1.PM25, test1.PM1 , test1.PM10);
+  // Serial.printf("id:%3d t:%6.2f h:%6.2f PM25:%3d PM1:%3d PM10:%3d\n", test2.ID, test2.TEMP,test2.HUMIDITY,test2.PM25, test2.PM1 , test2.PM10);
+
+  node.data.ID = 0;
+  node.setTemp(test1.TEMP);
+  node.setHumidity(test1.HUMIDITY);
+  node.setPM1(test1.PM1);
+  node.setPM10(test1.PM10);
+  node.setPM25(test1.PM25);
+  
+
+  uint8_t result[16];
+  node.getPacket(*result);
+
+  assertNotEqual(result[15], node.getDataCRC8() + 1);
+  // for(int i = 0; i < 16; i++){
+  //   Serial.printf("%x ", result[i]);
+  // }
+
+  }
+
+ 
 }
