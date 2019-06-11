@@ -203,8 +203,12 @@ void setup()
   //Init Wifi
   showDebugMessage("Connecting to Wifi");
   wifiManager.setAPCallback(setConfigModeCallback);
-  if (wifiManager.autoConnect("TTGO-ESP32 LoRa"));
-    showDebugMessage("Wifi Connected");
+  wifiManager.setConfigPortalTimeout(180);          //3 Min for Config mode.
+  if (wifiManager.autoConnect("K-LASS Gateway")){  //It will return false if it can't connect to wifi (in 3 min)
+      showDebugMessage("Wifi Connected");
+  }else{
+    ESP.restart();                                  //Restart if it can't connect.
+  }
 
   delay (1500);
   
