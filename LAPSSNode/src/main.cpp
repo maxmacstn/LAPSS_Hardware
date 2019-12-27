@@ -22,7 +22,7 @@
 #define ONBOARD_LED 2
 #define DHT_Pin 15
 #define NODE_ID 2
-#define STANALONE_MODE false
+#define STANALONE_MODE true
 
 //Init Object
 PMS pms(Serial2);
@@ -38,12 +38,13 @@ RTC_DATA_ATTR uint16_t PM10 = 0;
 //For standalone mode
 WiFiManager wifiManager;
 const String lapssEndpoint = "https://lapsscentral.azurewebsites.net/api/sensors";
+const String emonAPIKey = "7392d102d9a61972b6893f5f8afae81f"; //api key
 
-
-void sendDataWiFi(){
+void sendDataWiFi()
+{
   const int JSONSIZE = JSON_OBJECT_SIZE(7);
   StaticJsonDocument<JSONSIZE> jsonDoc;
-  jsonDoc["name"] =  "Node "+ String(NODE_ID,DEC);
+  jsonDoc["name"] = "Node " + String(NODE_ID, DEC);
   jsonDoc["pm25Level"] = node.data.PM25;
   jsonDoc["pm10Level"] = node.data.PM10;
   jsonDoc["pm1Level"] = node.data.PM1;
@@ -55,12 +56,11 @@ void sendDataWiFi(){
   String postData;
   http.begin(lapssEndpoint); //Specify request destination
   // http.setTimeout(5);
-  serializeJson(jsonDoc,postData);
+  serializeJson(jsonDoc, postData);
   http.addHeader("Content-Type", "application/json");
   Serial.println(postData);
 
-  int httpCode =   http.POST(postData);
-
+  int httpCode = http.POST(postData);
 
   if (httpCode == 200)
   {
@@ -69,8 +69,31 @@ void sendDataWiFi(){
   }
   else
   {
-    Serial.println("Error "+ httpCode);
+    Serial.println("Error " + httpCode);
+  }
 
+  http.end(); //Close connection
+
+  //EMON CMS
+
+  postData = "node=LAPSSNode&json={temperature:" + String(node.data.TEMP, 1) + ",humidity:" + String(node.data.HUMIDITY, 1) + ",PM25:" + String(node.data.PM25, DEC) + "}&apikey=" + emonAPIKey;
+  http.begin("http://emoncms.org/input/post?" + postData); //Specify request destination
+
+  httpCode = http.GET();             //Send the request
+  String payload = http.getString(); //Get the response payload
+
+  // Serial.println(httpCode); //Print HTTP return code
+  // Serial.println(postData);  //Print request response payload
+
+  if (httpCode == 200)
+  {
+    Serial.println("EMON Send OK");
+    delay(500);
+  }
+  else
+  {
+    Serial.println("EMON Send Failed Error code :" + String(httpCode, DEC));
+    delay(500);
   }
 
   http.end(); //Close connection
@@ -85,29 +108,31 @@ void sendData()
   Serial.printf("\tPM 1 (ug/m3): %d\n", node.data.PM1);
   Serial.printf("\tPM 10 (ug/m3): %d\n", node.data.PM10);
 
-  if(STANALONE_MODE){
-      sendDataWiFi();
-  }
-  else{
-
-  //Print the data as Hex
-  Serial.printf("Data bytes: ");
-  uint8_t *addr = &(node.data).ID;
-  uint8_t len = sizeof(node.data);
-  while (len--)
+  if (STANALONE_MODE)
   {
-    uint8_t inbyte = *addr++;
-    Serial.printf("%02X ", inbyte);
+    sendDataWiFi();
   }
-  Serial.println("");
-  node.sendPacket();
+  else
+  {
+
+    //Print the data as Hex
+    Serial.printf("Data bytes: ");
+    uint8_t *addr = &(node.data).ID;
+    uint8_t len = sizeof(node.data);
+    while (len--)
+    {
+      uint8_t inbyte = *addr++;
+      Serial.printf("%02X ", inbyte);
+    }
+    Serial.println("");
+    node.sendPacket();
   }
   delay(1000);
 }
 
 //Fetch data from sensors and send to gateway.
 void fetchDHT()
-{  
+{
   //Setup DHT
   dht.setup(DHT_Pin);
   dht.getMinimumSamplingPeriod();
@@ -160,36 +185,42 @@ void setup()
   Serial.begin(9600);  // Serial to PC
   Serial2.begin(9600); // Serial for PMS Dust sensor
 
-  Serial.println("\n\nBootCount = " + String(bootCount,DEC));
+  Serial.println("\n\nBootCount = " + String(bootCount, DEC));
 
   //Turn on onboard LED to indicate that it's working
-  pinMode(ONBOARD_LED,OUTPUT);
-  digitalWrite(ONBOARD_LED,HIGH);
+  pinMode(ONBOARD_LED, OUTPUT);
+  digitalWrite(ONBOARD_LED, HIGH);
 
-  if(STANALONE_MODE){
-    wifiManager.autoConnect("KLASS Standalone");
-  }
-  else{
-
-  //Init LoRa Chip
-  SPI.begin(SCK, MISO, MOSI, SS);
-  LoRa.setPins(SS, RST, DI0);
-  if (!LoRa.begin(BAND))
+  if (STANALONE_MODE)
   {
-    Serial.println("Starting LoRa failed!");
-    while (1)
-      ;
+    wifiManager.setTimeout(60);
+    if(!wifiManager.autoConnect("KLASS Standalone")){
+      ESP.restart();
+    }
   }
+  else
+  {
+    //Init LoRa Chip
+    SPI.begin(SCK, MISO, MOSI, SS);
+    LoRa.setPins(SS, RST, DI0);
+    if (!LoRa.begin(BAND))
+    {
+      Serial.println("Starting LoRa failed!");
+      while (1)
+        ;
+    }
     Serial.println("init lora Ok");
-
   }
-  
+
   node.setup(LoRa, NODE_ID);
 
   fetchDHT();
-  if (bootCount % PMS_UPDATE_INTERVAL == 0){
+  if (bootCount % PMS_UPDATE_INTERVAL == 0)
+  {
     fetchPMS();
-  }else{ 
+  }
+  else
+  {
     //if isn't the time for fetching new dust senser value, return last value instead.
     node.setPM25(PM25);
     node.setPM1(PM1);
@@ -201,7 +232,7 @@ void setup()
   //Sleep ESP32
   esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
   Serial.println("Sleep the MCU");
-    digitalWrite(ONBOARD_LED,LOW);
+  digitalWrite(ONBOARD_LED, LOW);
 
   esp_deep_sleep_start();
 }
