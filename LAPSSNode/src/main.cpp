@@ -16,8 +16,8 @@
 #define DI0 26  // GPIO26 - SX1278's IRQ (interrupt request)
 #define BAND 915E6
 #define uS_TO_S_FACTOR 1000000 /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP 300      /* Time ESP32 will go to sleep (in seconds) */
-#define PMS_UPDATE_INTERVAL 3  /* Fetch dust sensors every TIME_TO_SLEEP * PMS_UPDATE_INTERVAL seconds */
+#define TIME_TO_SLEEP 720      /* Time ESP32 will go to sleep (in seconds) */
+#define PMS_UPDATE_INTERVAL 1  /* Fetch dust sensors every TIME_TO_SLEEP * PMS_UPDATE_INTERVAL seconds */
 #define PMS_ENA_Pin 4
 #define ONBOARD_LED 2
 #define DHT_Pin 15
@@ -76,27 +76,27 @@ void sendDataWiFi()
 
   //EMON CMS
 
-  postData = "node=LAPSSNode&json={temperature:" + String(node.data.TEMP, 1) + ",humidity:" + String(node.data.HUMIDITY, 1) + ",PM25:" + String(node.data.PM25, DEC) + "}&apikey=" + emonAPIKey;
-  http.begin("http://emoncms.org/input/post?" + postData); //Specify request destination
+  // postData = "node=LAPSSNode&json={temperature:" + String(node.data.TEMP, 1) + ",humidity:" + String(node.data.HUMIDITY, 1) + ",PM25:" + String(node.data.PM25, DEC) + "}&apikey=" + emonAPIKey;
+  // http.begin("http://emoncms.org/input/post?" + postData); //Specify request destination
 
-  httpCode = http.GET();             //Send the request
-  String payload = http.getString(); //Get the response payload
+  // httpCode = http.GET();             //Send the request
+  // String payload = http.getString(); //Get the response payload
 
-  // Serial.println(httpCode); //Print HTTP return code
-  // Serial.println(postData);  //Print request response payload
+  // // Serial.println(httpCode); //Print HTTP return code
+  // // Serial.println(postData);  //Print request response payload
 
-  if (httpCode == 200)
-  {
-    Serial.println("EMON Send OK");
-    delay(500);
-  }
-  else
-  {
-    Serial.println("EMON Send Failed Error code :" + String(httpCode, DEC));
-    delay(500);
-  }
+  // if (httpCode == 200)
+  // {
+  //   Serial.println("EMON Send OK");
+  //   delay(500);
+  // }
+  // else
+  // {
+  //   Serial.println("EMON Send Failed Error code :" + String(httpCode, DEC));
+  //   delay(500);
+  // }
 
-  http.end(); //Close connection
+  // http.end(); //Close connection
 }
 
 void sendData()
@@ -107,6 +107,11 @@ void sendData()
   Serial.printf("\tPM 2.5 (ug/m3): %d\n", node.data.PM25);
   Serial.printf("\tPM 1 (ug/m3): %d\n", node.data.PM1);
   Serial.printf("\tPM 10 (ug/m3): %d\n", node.data.PM10);
+
+  if (node.data.HUMIDITY < 10 && node.data.TEMP < 10){
+    Serial.println("Temp/Humidity readings error!");
+    return;
+  }
 
   if (STANALONE_MODE)
   {
@@ -149,23 +154,41 @@ void fetchPMS()
   //Setup PMS Sensor
   pinMode(PMS_ENA_Pin, OUTPUT);
   digitalWrite(PMS_ENA_Pin, 1);
+  delay(5000);
 
-  pms.passiveMode(); // Switch to passive mode
-  pms.wakeUp();
-  Serial.print("Warming up PMS Dust sensor");
-  for (int i = 0; i < 60; i++)
-  {
-    Serial.printf(". ");
+  // **Passive Mode**
+  // pms.passiveMode(); // Switch to passive mode
+  // pms.wakeUp();
+  // Serial.print("Warming up PMS Dust sensor");
+  // for (int i = 0; i < 60; i++)
+  // {
+  //   Serial.printf(". ");
+  //   delay(1000);
+  // }
+  // Serial.println();
+  // Serial.println("Sensors read request..");
+  // pms.requestRead();
+  // if (!pms.readUntil(data))
+  // {
+  //   Serial.println("Can't get dust sensor data");
+  //   return;
+  // }
+
+  for(int i = 0 ; i < 120; i++){
+    if (pms.read(data))
+    {
+      Serial.print("PM 1.0 (ug/m3): ");
+      Serial.println(data.PM_AE_UG_1_0);
+      Serial.print("PM 2.5 (ug/m3): ");
+      Serial.println(data.PM_AE_UG_2_5);
+      Serial.print("PM 10.0 (ug/m3): ");
+      Serial.println(data.PM_AE_UG_10_0);
+      Serial.println();
+    }
     delay(1000);
   }
-  Serial.println();
-  Serial.println("Sensors read request..");
-  pms.requestRead();
-  if (!pms.readUntil(data))
-  {
-    Serial.println("Can't get dust sensor data");
-    return;
-  }
+
+
   PM25 = data.PM_AE_UG_2_5;
   PM1 = data.PM_AE_UG_1_0;
   PM10 = data.PM_AE_UG_10_0;
@@ -195,7 +218,12 @@ void setup()
   {
     wifiManager.setTimeout(60);
     if(!wifiManager.autoConnect("KLASS Standalone")){
-      ESP.restart();
+      bootCount++;
+      //Sleep ESP32
+      esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+      Serial.println("Sleep the MCU - WiFi Connection Failed");
+      digitalWrite(ONBOARD_LED, LOW);
+      esp_deep_sleep_start();
     }
   }
   else
